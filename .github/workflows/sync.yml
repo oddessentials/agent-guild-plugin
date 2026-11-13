@@ -31,7 +31,12 @@ jobs:
           cp -R "$RUNNER_TEMP/upstream/plugins/agent-guild" plugins/agent-guild
           cp "$RUNNER_TEMP/upstream/.claude-plugin/marketplace.json" .claude-plugin/marketplace.json
           cp "$RUNNER_TEMP/upstream/LICENSE" LICENSE
+          cp README.md plugins/agent-guild/README.md
+          version=$(npm view @oddessentials/agent-guild version)
+          jq --arg v "$version" '.version = $v | .mcpServers |= with_entries(.value.args |= map(if test("^@oddessentials/agent-guild@") then "@oddessentials/agent-guild@" + $v else . end))' plugins/agent-guild/.claude-plugin/plugin.json > "$RUNNER_TEMP/plugin.json"
+          mv "$RUNNER_TEMP/plugin.json" plugins/agent-guild/.claude-plugin/plugin.json
           echo "UPSTREAM_SHA=$(git -C "$RUNNER_TEMP/upstream" rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "PINNED=$version" >> "$GITHUB_ENV"
 
       - name: Check
         run: |
@@ -45,6 +50,10 @@ jobs:
           jq -e --arg n "$name" '[.plugins[] | select(.name == $n and .source == "./plugins/" + $n)] | length == 1' "$market" > /dev/null
           icon=$(jq -r '.icon // empty' "$plugin")
           if [ -n "$icon" ]; then test -f "plugins/agent-guild/$icon"; fi
+          version=$(jq -er .version "$plugin")
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          jq -e --arg v "$version" '[.mcpServers[].args[] | select(test("^@oddessentials/agent-guild"))] | length > 0 and all(. == "@oddessentials/agent-guild@" + $v)' "$plugin" > /dev/null
+          if grep -q '@latest' "$plugin"; then exit 1; fi
           skills=(plugins/agent-guild/skills/*/SKILL.md)
           test -f "${skills[0]}"
           for skill in "${skills[@]}"; do
@@ -52,11 +61,13 @@ jobs:
             grep -qx "name: $(basename "$(dirname "$skill")")" "$skill"
           done
           test -s LICENSE
+          cmp -s README.md plugins/agent-guild/README.md
+          test "$(wc -w < plugins/agent-guild/README.md)" -ge 40
 
       - name: Commit
         if: github.event_name != 'pull_request'
         run: |
           git add -A plugins .claude-plugin LICENSE
           if git diff --cached --quiet; then exit 0; fi
-          git -c user.name="github-actions[bot]" -c user.email="41898283+github-actions[bot]@users.noreply.github.com" commit --quiet -m "Sync from oddessentials/agent-guild@$UPSTREAM_SHA"
+          git -c user.name="github-actions[bot]" -c user.email="41898283+github-actions[bot]@users.noreply.github.com" commit --quiet -m "Sync from oddessentials/agent-guild@$UPSTREAM_SHA, pinned to @oddessentials/agent-guild@$PINNED"
           git push

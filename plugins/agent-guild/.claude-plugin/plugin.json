@@ -21,10 +21,11 @@
       "command": "npx",
       "args": [
         "-y",
-        "@oddessentials/agent-guild@latest",
+        "@oddessentials/agent-guild@1.33.1",
         "mcp"
       ]
     }
   },
-  "icon": "./.claude-plugin/icon.png"
+  "icon": "./.claude-plugin/icon.png",
+  "version": "1.33.1"
 }
