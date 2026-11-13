@@ -1,0 +1,62 @@
+name: Sync
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy from oddessentials/agent-guild
+        if: github.event_name != 'pull_request'
+        run: |
+          git clone --quiet --depth 1 --filter=blob:none --sparse https://github.com/oddessentials/agent-guild.git "$RUNNER_TEMP/upstream"
+          git -C "$RUNNER_TEMP/upstream" sparse-checkout set --no-cone /plugins/agent-guild/ /.claude-plugin/marketplace.json /LICENSE
+          rm -rf plugins/agent-guild .claude-plugin LICENSE
+          mkdir -p plugins .claude-plugin
+          cp -R "$RUNNER_TEMP/upstream/plugins/agent-guild" plugins/agent-guild
+          cp "$RUNNER_TEMP/upstream/.claude-plugin/marketplace.json" .claude-plugin/marketplace.json
+          cp "$RUNNER_TEMP/upstream/LICENSE" LICENSE
+          echo "UPSTREAM_SHA=$(git -C "$RUNNER_TEMP/upstream" rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Check
+        run: |
+          set -euo pipefail
+          plugin=plugins/agent-guild/.claude-plugin/plugin.json
+          market=.claude-plugin/marketplace.json
+          jq -e . "$plugin" > /dev/null
+          jq -e . "$market" > /dev/null
+          name=$(jq -er .name "$plugin")
+          test "$name" = agent-guild
+          jq -e --arg n "$name" '[.plugins[] | select(.name == $n and .source == "./plugins/" + $n)] | length == 1' "$market" > /dev/null
+          icon=$(jq -r '.icon // empty' "$plugin")
+          if [ -n "$icon" ]; then test -f "plugins/agent-guild/$icon"; fi
+          skills=(plugins/agent-guild/skills/*/SKILL.md)
+          test -f "${skills[0]}"
+          for skill in "${skills[@]}"; do
+            test "$(head -n 1 "$skill")" = "---"
+            grep -qx "name: $(basename "$(dirname "$skill")")" "$skill"
+          done
+          test -s LICENSE
+
+      - name: Commit
+        if: github.event_name != 'pull_request'
+        run: |
+          git add -A plugins .claude-plugin LICENSE
+          if git diff --cached --quiet; then exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898283+github-actions[bot]@users.noreply.github.com" commit --quiet -m "Sync from oddessentials/agent-guild@$UPSTREAM_SHA"
+          git push
