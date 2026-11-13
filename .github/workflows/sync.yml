@@ -33,7 +33,7 @@ jobs:
           cp "$RUNNER_TEMP/upstream/LICENSE" LICENSE
           cp README.md plugins/agent-guild/README.md
           version=$(npm view @oddessentials/agent-guild version)
-          jq --arg v "$version" '.version = $v | .mcpServers |= with_entries(.value.args |= map(if test("^@oddessentials/agent-guild@") then "@oddessentials/agent-guild@" + $v else . end))' plugins/agent-guild/.claude-plugin/plugin.json > "$RUNNER_TEMP/plugin.json"
+          jq --arg v "$version" '.version = $v | .privacyPolicyUrl = "https://agentguild.oddessentials.ai/privacy/" | .mcpServers |= with_entries(.value.args |= map(if test("^@oddessentials/agent-guild@") then "@oddessentials/agent-guild@" + $v else . end))' plugins/agent-guild/.claude-plugin/plugin.json > "$RUNNER_TEMP/plugin.json"
           mv "$RUNNER_TEMP/plugin.json" plugins/agent-guild/.claude-plugin/plugin.json
           echo "UPSTREAM_SHA=$(git -C "$RUNNER_TEMP/upstream" rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "PINNED=$version" >> "$GITHUB_ENV"
@@ -54,6 +54,7 @@ jobs:
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           jq -e --arg v "$version" '[.mcpServers[].args[] | select(test("^@oddessentials/agent-guild"))] | length > 0 and all(. == "@oddessentials/agent-guild@" + $v)' "$plugin" > /dev/null
           if grep -q '@latest' "$plugin"; then exit 1; fi
+          test "$(jq -r .privacyPolicyUrl "$plugin")" = "https://agentguild.oddessentials.ai/privacy/"
           skills=(plugins/agent-guild/skills/*/SKILL.md)
           test -f "${skills[0]}"
           for skill in "${skills[@]}"; do

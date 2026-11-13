@@ -27,5 +27,6 @@
     }
   },
   "icon": "./.claude-plugin/icon.png",
-  "version": "1.33.1"
+  "version": "1.33.1",
+  "privacyPolicyUrl": "https://agentguild.oddessentials.ai/privacy/"
 }

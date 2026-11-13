@@ -9,4 +9,4 @@ The plugin adds two things:
 
 It needs Node.js 22 or newer.
 
-This repository is a copy of [`plugins/agent-guild`](https://github.com/oddessentials/agent-guild/tree/main/plugins/agent-guild) from [oddessentials/agent-guild](https://github.com/oddessentials/agent-guild), kept in sync by [`.github/workflows/sync.yml`](.github/workflows/sync.yml), which also pins the MCP server and the plugin's version to the latest release of `@oddessentials/agent-guild`. Make changes there; changes made here are overwritten.
+This repository is a copy of [`plugins/agent-guild`](https://github.com/oddessentials/agent-guild/tree/main/plugins/agent-guild) from [oddessentials/agent-guild](https://github.com/oddessentials/agent-guild), kept in sync by [`.github/workflows/sync.yml`](.github/workflows/sync.yml), which also pins the MCP server and the plugin's version to the latest release of `@oddessentials/agent-guild` and sets its privacy policy link. Make changes there; changes made here are overwritten.
